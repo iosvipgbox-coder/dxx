@@ -1,0 +1,61 @@
+name: Unzip GBOXIOSVIP-IPA-ANGELICAL-VERDE-REPLACED na Raiz
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unzip_and_flatten:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract ZIP, strip all nested folders and flatten to root
+        run: |
+          ZIP_FILE="GBOXIOSVIP-IPA-ANGELICAL-VERDE-REPLACED.zip"
+          if [ -f "$ZIP_FILE" ]; then
+            echo "A descompactar $ZIP_FILE..."
+            mkdir -p temp_extract
+            unzip -O CP850 -o "$ZIP_FILE" -d temp_extract/ || unzip -o "$ZIP_FILE" -d temp_extract/
+            
+            # Apaga o zip da raiz para limpar o repositório
+            rm -f "$ZIP_FILE"
+            
+            echo "A descer e remover todas as camadas de pastas aninhadas..."
+            while [ $(find temp_extract -mindepth 1 -maxdepth 1 | wc -l) -eq 1 ] && [ -d "$(find temp_extract -mindepth 1 -maxdepth 1)" ]; do
+              SINGLE_DIR=$(find temp_extract -mindepth 1 -maxdepth 1)
+              echo "A abrir pasta encapsulada: $SINGLE_DIR"
+              shopt -s dotglob
+              mv "$SINGLE_DIR"/* temp_extract/ 2>/dev/null || true
+              mv "$SINGLE_DIR"/.* temp_extract/ 2>/dev/null || true
+              rmdir "$SINGLE_DIR" 2>/dev/null || rm -rf "$SINGLE_DIR"
+            done
+            
+            echo "A jogar todos os ficheiros finais diretamente na raiz..."
+            shopt -s dotglob
+            cp -r temp_extract/* ./ 2>/dev/null || true
+            cp -r temp_extract/.* ./ 2>/dev/null || true
+            rm -rf temp_extract
+            
+            echo "Concluído com sucesso!"
+          else
+            echo "Erro: O ficheiro $ZIP_FILE não foi encontrado na raiz do repositório!"
+            exit 1
+          fi
+
+      - name: Commit changes safely
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add .
+          
+          if git diff --staged --quiet; then
+            echo "Nenhuma alteração detetada para commit."
+          else
+            git commit -m "Fix: Descompacta e aplaina GBOXIOSVIP-IPA-ANGELICAL-VERDE-REPLACED.zip diretamente na raiz"
+            git push
+          fi
