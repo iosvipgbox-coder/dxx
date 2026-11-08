@@ -1,4 +1,4 @@
-name: Unzip GBOXIOSVIP-IPA-ANGELICAL-VERDE-REPLACED na Raiz
+name: Mover Conteudo GBOXIOSVIP-verdvisual-app para a Raiz
 
 on:
   workflow_dispatch:
@@ -7,42 +7,28 @@ permissions:
   contents: write
 
 jobs:
-  unzip_and_flatten:
+  move_to_root:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract ZIP, strip all nested folders and flatten to root
+      - name: Move contents from GBOXIOSVIP-verdvisual-app to root
         run: |
-          ZIP_FILE="GBOXIOSVIP-IPA-ANGELICAL-VERDE-REPLACED.zip"
-          if [ -f "$ZIP_FILE" ]; then
-            echo "A descompactar $ZIP_FILE..."
-            mkdir -p temp_extract
-            unzip -O CP850 -o "$ZIP_FILE" -d temp_extract/ || unzip -o "$ZIP_FILE" -d temp_extract/
-            
-            # Apaga o zip da raiz para limpar o repositório
-            rm -f "$ZIP_FILE"
-            
-            echo "A descer e remover todas as camadas de pastas aninhadas..."
-            while [ $(find temp_extract -mindepth 1 -maxdepth 1 | wc -l) -eq 1 ] && [ -d "$(find temp_extract -mindepth 1 -maxdepth 1)" ]; do
-              SINGLE_DIR=$(find temp_extract -mindepth 1 -maxdepth 1)
-              echo "A abrir pasta encapsulada: $SINGLE_DIR"
-              shopt -s dotglob
-              mv "$SINGLE_DIR"/* temp_extract/ 2>/dev/null || true
-              mv "$SINGLE_DIR"/.* temp_extract/ 2>/dev/null || true
-              rmdir "$SINGLE_DIR" 2>/dev/null || rm -rf "$SINGLE_DIR"
-            done
-            
-            echo "A jogar todos os ficheiros finais diretamente na raiz..."
+          TARGET_DIR="GBOXIOSVIP-verdvisual-app"
+          if [ -d "$TARGET_DIR" ]; then
+            echo "A mover o conteúdo de $TARGET_DIR diretamente para a raiz..."
             shopt -s dotglob
-            cp -r temp_extract/* ./ 2>/dev/null || true
-            cp -r temp_extract/.* ./ 2>/dev/null || true
-            rm -rf temp_extract
             
-            echo "Concluído com sucesso!"
+            # Copia todos os ficheiros e pastas de dentro para a raiz (.)
+            cp -r "$TARGET_DIR"/* ./ 2>/dev/null || true
+            cp -r "$TARGET_DIR"/.* ./ 2>/dev/null || true
+            
+            # Remove a pasta original
+            rm -rf "$TARGET_DIR"
+            echo "Conteúdo movido com sucesso e pasta antiga removida!"
           else
-            echo "Erro: O ficheiro $ZIP_FILE não foi encontrado na raiz do repositório!"
+            echo "Erro: A pasta $TARGET_DIR não foi encontrada na raiz do repositório!"
             exit 1
           fi
 
@@ -56,6 +42,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "Nenhuma alteração detetada para commit."
           else
-            git commit -m "Fix: Descompacta e aplaina GBOXIOSVIP-IPA-ANGELICAL-VERDE-REPLACED.zip diretamente na raiz"
+            git commit -m "Fix: Move tudo de GBOXIOSVIP-verdvisual-app diretamente para a raiz"
             git push
           fi
